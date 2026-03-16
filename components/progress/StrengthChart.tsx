@@ -38,7 +38,7 @@ export default function StrengthChart(props: StrengthChartProps) {
   const data = datosPorEjercicio[ejercicio] ?? [];
 
   return (
-    <div className="rounded-xl bg-zinc-900 p-6">
+    <div className="w-full rounded-xl bg-zinc-900 p-4 md:p-6">
       <h2 className="text-lg font-semibold text-zinc-100">
         Evolución de Fuerza
       </h2>
@@ -46,7 +46,7 @@ export default function StrengthChart(props: StrengthChartProps) {
         <select
           value={ejercicio}
           onChange={(e) => setEjercicio(e.target.value)}
-          className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          className="min-h-[44px] w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-base text-zinc-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 md:min-h-0 md:w-auto md:text-sm"
         >
           {ejercicios.map((name) => (
             <option key={name} value={name}>
@@ -55,7 +55,7 @@ export default function StrengthChart(props: StrengthChartProps) {
           ))}
         </select>
       </div>
-      <div className="mt-4 h-[220px] w-full">
+      <div className="mt-4 h-[200px] w-full min-w-0 md:h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}

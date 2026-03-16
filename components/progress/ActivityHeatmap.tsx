@@ -30,7 +30,7 @@ export default function ActivityHeatmap({
   const days = getDaysForHeatmap(daysToShow);
 
   return (
-    <div className="rounded-xl bg-zinc-900 p-6">
+    <div className="w-full rounded-xl bg-zinc-900 p-4 md:p-6">
       <h2 className="text-lg font-semibold text-zinc-100">
         Historial de Actividad
       </h2>

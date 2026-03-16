@@ -23,7 +23,7 @@ export default function Sidebar() {
     pathname === "/actividades" || pathname.startsWith("/actividades/");
 
   return (
-    <aside className="fixed left-0 top-0 z-30 flex h-screen w-[260px] flex-col border-r border-zinc-800 bg-zinc-900/95 p-5">
+    <aside className="fixed left-0 top-0 z-30 hidden h-screen w-[260px] flex-col border-r border-zinc-800 bg-zinc-900/95 p-5 md:flex">
       {/* Logo */}
       <Link
         href="/"

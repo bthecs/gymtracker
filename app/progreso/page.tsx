@@ -36,7 +36,7 @@ export default async function ProgresoPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-6 md:p-8">
       {/* Encabezado */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold text-zinc-100">Mi Progreso</h1>
