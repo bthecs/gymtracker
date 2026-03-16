@@ -1,9 +1,11 @@
-import { getRutinaRows } from "@/lib/data";
-import { getWeeklySummary } from "@/lib/data";
+import { getRutinaRows, getWeeklySummary } from "@/lib/data";
 import DayCard from "@/components/DayCard";
 
+/** Siempre datos frescos de Supabase (sin cachear la página). */
+export const dynamic = "force-dynamic";
+
 export default async function ActividadesPage() {
-  const rows = await getRutinaRows();
+  const { rows } = await getRutinaRows();
   const summary = getWeeklySummary(rows);
 
   return (
@@ -29,7 +31,6 @@ export default async function ActividadesPage() {
           </svg>
         </div>
       </div>
-      {/* Móvil: lista vertical una columna; escritorio: grid */}
       <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
         {summary.map((day) => (
           <DayCard key={day.dia} day={day} />

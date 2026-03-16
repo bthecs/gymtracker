@@ -9,6 +9,7 @@ import {
   Settings,
   User,
 } from "lucide-react";
+import SignOutButton from "@/components/SignOutButton";
 
 const navItems = [
   { href: "/", label: "Inicio", icon: LayoutDashboard },
@@ -44,7 +45,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navegación */}
-      <nav className="flex flex-col gap-1">
+      <nav className="flex flex-1 flex-col gap-1">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive =
             label === "Actividades" ? isActividades : pathname === href;
@@ -64,6 +65,8 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      <SignOutButton variant="sidebar" />
     </aside>
   );
 }

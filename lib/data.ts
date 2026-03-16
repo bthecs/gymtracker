@@ -1,26 +1,79 @@
-import Papa from "papaparse";
+import { unstable_noStore as noStore } from "next/cache";
 import type { RutinaRow } from "./types";
 import { MOCK_RUTINA_ROWS } from "./mockData";
 import { DIAS_SEMANA, type DaySummary, type Exercise } from "./types";
-
-/** URL pública del CSV de Google Sheets. Vacía = usar solo datos mock. */
-export const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRiLph3aoNI65nNxIl680vvm5IcR8KybcrpqTe2fXVuL3dsvkypaFUvxkpp5V9_oNPZnRzsXZ0wWlop/pub?gid=0&single=true&output=csv";
+import { createClient } from "@/utils/supabase/server";
+import type { RutinaRowDb } from "./supabase-types";
 
 /**
- * Obtiene las filas de rutina: desde CSV si hay URL, si no desde mock.
+ * Mapea una fila de Supabase (snake_case) a RutinaRow (PascalCase).
  */
-export async function getRutinaRows(): Promise<RutinaRow[]> {
-  if (!SHEET_CSV_URL.trim()) {
-    return MOCK_RUTINA_ROWS;
-  }
+function mapRutinaRowDbToRutinaRow(r: RutinaRowDb): RutinaRow {
+  return {
+    Dia: r.dia ?? "",
+    GrupoMuscular: r.grupo_muscular ?? "",
+    Duracion: r.duracion ?? "",
+    Ejercicio: r.ejercicio ?? "",
+    Series: String(r.series ?? ""),
+    Repeticiones: String(r.repeticiones ?? ""),
+  };
+}
+
+export type RutinasDataSource = "supabase" | "mock";
+
+/**
+ * Resultado de getRutinaRows: filas y origen para mostrar en la UI.
+ */
+export interface GetRutinaRowsResult {
+  rows: RutinaRow[];
+  source: RutinasDataSource;
+}
+
+/**
+ * Obtiene las filas de rutina desde Supabase (tabla `rutinas`) filtradas por el usuario logueado.
+ * noStore() evita que Next.js cachee esta petición.
+ */
+export async function getRutinaRows(): Promise<GetRutinaRowsResult> {
+  noStore();
   try {
-    const res = await fetch(SHEET_CSV_URL, { next: { revalidate: 60 } });
-    const text = await res.text();
-    const parsed = Papa.parse<RutinaRow>(text, { header: true, skipEmptyLines: true });
-    if (parsed.errors.length > 0) return MOCK_RUTINA_ROWS;
-    return parsed.data.length ? parsed.data : MOCK_RUTINA_ROWS;
-  } catch {
-    return MOCK_RUTINA_ROWS;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[FitTrack] Rutinas: sin usuario, devolviendo vacío");
+      }
+      return { rows: [], source: "supabase" };
+    }
+    const { data, error } = await supabase
+      .from("rutinas")
+      .select("*")
+      .eq("user_id", user.id);
+    if (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[FitTrack] Rutinas Supabase error:", error.message);
+      }
+      return { rows: MOCK_RUTINA_ROWS, source: "mock" };
+    }
+    if (!data || data.length === 0) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[FitTrack] Rutinas: tabla vacía en Supabase");
+      }
+      return { rows: [], source: "supabase" };
+    }
+    if (process.env.NODE_ENV === "development") {
+      console.log("[FitTrack] Rutinas: cargadas desde SUPABASE (tabla rutinas)", data.length, "filas");
+    }
+    return {
+      rows: data.map((r) => mapRutinaRowDbToRutinaRow(r as RutinaRowDb)),
+      source: "supabase",
+    };
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[FitTrack] Rutinas: Supabase no configurado o error, usando MOCK", e);
+    }
+    return { rows: MOCK_RUTINA_ROWS, source: "mock" };
   }
 }
 

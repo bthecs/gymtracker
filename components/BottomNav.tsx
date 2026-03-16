@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Settings,
 } from "lucide-react";
+import SignOutButton from "@/components/SignOutButton";
 
 const navItems = [
   { href: "/", label: "Inicio", icon: LayoutDashboard },
@@ -44,6 +45,7 @@ export default function BottomNav() {
           </Link>
         );
       })}
+      <SignOutButton variant="bottom" />
     </nav>
   );
 }

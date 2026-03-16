@@ -1,35 +1,78 @@
-import Papa from "papaparse";
+import { unstable_noStore as noStore } from "next/cache";
 import type { HistorialRow } from "./historialTypes";
 import { MOCK_HISTORIAL } from "./historialMock";
+import { createClient } from "@/utils/supabase/server";
+import type { HistorialRowDb } from "./supabase-types";
 
-/** URL pública del CSV de historial de Google Sheets. Vacía = usar solo mock. */
-export const HISTORIAL_CSV_URL = "";
+function mapHistorialDbToRow(r: HistorialRowDb): HistorialRow {
+  const fecha = r.creado_en
+    ? r.creado_en.slice(0, 10)
+    : (r.fecha ?? "");
+  return {
+    Fecha: fecha,
+    Ejercicio: r.ejercicio ?? "",
+    Peso_Kg: Number(r.peso_kg) || 0,
+    Series_Completadas: Number(r.series_completadas) || 0,
+    Repeticiones_Completadas: Number(r.repeticiones_completadas) || 0,
+  };
+}
+
+export type HistorialDataSource = "supabase" | "mock";
 
 /**
- * Obtiene las filas de historial: desde CSV si hay URL, si no desde mock.
+ * Resultado de getHistorialRows: filas y origen para mostrar en la UI.
  */
-export async function getHistorialRows(): Promise<HistorialRow[]> {
-  if (!HISTORIAL_CSV_URL.trim()) {
-    return MOCK_HISTORIAL;
-  }
+export interface GetHistorialRowsResult {
+  rows: HistorialRow[];
+  source: HistorialDataSource;
+}
+
+/**
+ * Obtiene las filas de historial desde Supabase (tabla `historial`) filtradas por el usuario logueado.
+ * noStore() evita que Next.js cachee esta petición.
+ */
+export async function getHistorialRows(): Promise<GetHistorialRowsResult> {
+  noStore();
   try {
-    const res = await fetch(HISTORIAL_CSV_URL, { next: { revalidate: 60 } });
-    const text = await res.text();
-    const parsed = Papa.parse<Record<string, string>>(text, {
-      header: true,
-      skipEmptyLines: true,
-    });
-    if (parsed.errors.length > 0) return MOCK_HISTORIAL;
-    const rows: HistorialRow[] = parsed.data.map((r) => ({
-      Fecha: r.Fecha ?? "",
-      Ejercicio: r.Ejercicio ?? "",
-      Peso_Kg: Number(r.Peso_Kg) || 0,
-      Series_Completadas: Number(r.Series_Completadas) || 0,
-      Repeticiones_Completadas: Number(r.Repeticiones_Completadas) || 0,
-    }));
-    return rows.length ? rows : MOCK_HISTORIAL;
-  } catch {
-    return MOCK_HISTORIAL;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[FitTrack] Historial: sin usuario, devolviendo vacío");
+      }
+      return { rows: [], source: "supabase" };
+    }
+    const { data, error } = await supabase
+      .from("historial")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("fecha", { ascending: true });
+    if (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[FitTrack] Historial Supabase error:", error.message);
+      }
+      return { rows: MOCK_HISTORIAL, source: "mock" };
+    }
+    if (!data || data.length === 0) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[FitTrack] Historial: tabla vacía en Supabase");
+      }
+      return { rows: [], source: "supabase" };
+    }
+    if (process.env.NODE_ENV === "development") {
+      console.log("[FitTrack] Historial: cargado desde SUPABASE (tabla historial)", data.length, "filas");
+    }
+    return {
+      rows: data.map((r) => mapHistorialDbToRow(r as HistorialRowDb)),
+      source: "supabase",
+    };
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[FitTrack] Historial: Supabase no configurado o error, usando MOCK", e);
+    }
+    return { rows: MOCK_HISTORIAL, source: "mock" };
   }
 }
 
@@ -111,3 +154,4 @@ export function getEvolucionPorEjercicio(
     .map(([fecha, peso]) => ({ fecha, peso }))
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
 }
+

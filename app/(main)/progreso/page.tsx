@@ -12,8 +12,11 @@ import ProgressCards from "@/components/progress/ProgressCards";
 import ActivityHeatmap from "@/components/progress/ActivityHeatmap";
 import StrengthChart from "@/components/progress/StrengthChart";
 
+/** Siempre datos frescos de Supabase. */
+export const dynamic = "force-dynamic";
+
 export default async function ProgresoPage() {
-  const rows = await getHistorialRows();
+  const { rows } = await getHistorialRows();
   const trainedDates = getTrainedDates(rows);
   const trainedDatesList = Array.from(trainedDates);
 
@@ -37,7 +40,6 @@ export default async function ProgresoPage() {
 
   return (
     <div className="px-4 py-6 md:p-8">
-      {/* Encabezado */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold text-zinc-100">Mi Progreso</h1>
         <button
@@ -49,7 +51,6 @@ export default async function ProgresoPage() {
         </button>
       </div>
 
-      {/* KPIs */}
       <section className="mb-8">
         <ProgressCards
           rachaDias={rachaDias}
@@ -58,12 +59,10 @@ export default async function ProgresoPage() {
         />
       </section>
 
-      {/* Heatmap */}
       <section className="mb-8">
         <ActivityHeatmap trainedDatesList={trainedDatesList} daysToShow={30} />
       </section>
 
-      {/* Gráfico de fuerza */}
       <section>
         <StrengthChart
           ejercicios={ejercicios.length > 0 ? ejercicios : [defaultEjercicio]}
