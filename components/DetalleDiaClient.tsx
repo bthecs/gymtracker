@@ -3,8 +3,12 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { Exercise } from "@/lib/types";
-import ExerciseItem, { type ExerciseItemState } from "@/components/ExerciseItem";
+import ExerciseItem, {
+  createInitialExerciseState,
+  type ExerciseItemState,
+} from "@/components/ExerciseItem";
 import { insertHistorialRegistros } from "@/lib/historialClient";
+import { buildHistorialItem } from "@/lib/historialInsertHelpers";
 
 interface DetalleDiaClientProps {
   diaNombre: string;
@@ -12,22 +16,11 @@ interface DetalleDiaClientProps {
   exercises: Exercise[];
 }
 
-function parseSeries(s: string): number {
-  const n = parseInt(s, 10);
-  return Number.isNaN(n) ? 1 : Math.max(1, n);
-}
-
 export default function DetalleDiaClient({
-  diaNombre,
-  grupoMuscular,
   exercises,
 }: DetalleDiaClientProps) {
   const [states, setStates] = useState<ExerciseItemState[]>(() =>
-    exercises.map(() => ({
-      completed: false,
-      pesoKg: 0,
-      repeticionesCompletadas: 0,
-    }))
+    exercises.map((ex) => createInitialExerciseState(ex))
   );
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<"success" | "error" | null>(null);
@@ -35,52 +28,68 @@ export default function DetalleDiaClient({
   const router = useRouter();
 
   const resetLocalState = useCallback(() => {
-    setStates(
-      exercises.map(() => ({
-        completed: false,
-        pesoKg: 0,
-        repeticionesCompletadas: 0,
-      }))
-    );
+    setStates(exercises.map((ex) => createInitialExerciseState(ex)));
   }, [exercises]);
 
-  const handleStateChange = useCallback((index: number, state: ExerciseItemState) => {
-    setStates((prev) => {
-      const next = [...prev];
-      next[index] = state;
-      return next;
-    });
-  }, []);
+  const handleStateChange = useCallback(
+    (index: number, state: ExerciseItemState) => {
+      setStates((prev) => {
+        const next = [...prev];
+        next[index] = state;
+        return next;
+      });
+    },
+    []
+  );
 
   const handleFinalizar = useCallback(async () => {
     const completedItems = exercises
-      .map((ex, i) => ({ ex, state: states[i] }))
+      .map((ex, i) => ({ ex, state: states[i]! }))
       .filter(({ state }) => state.completed);
     if (completedItems.length === 0) {
       setToast("error");
       setToastMessage("Marca al menos un ejercicio como completado.");
-      setTimeout(() => { setToast(null); setToastMessage(null); }, 3000);
+      setTimeout(() => {
+        setToast(null);
+        setToastMessage(null);
+      }, 3500);
       return;
     }
+
+    const items: Parameters<typeof insertHistorialRegistros>[0] = [];
+    for (const { ex, state } of completedItems) {
+      const { item, error } = buildHistorialItem(ex, state);
+      if (error || !item) {
+        setToast("error");
+        setToastMessage(error ?? "Revisa los datos de los ejercicios.");
+        setTimeout(() => {
+          setToast(null);
+          setToastMessage(null);
+        }, 4000);
+        return;
+      }
+      items.push(item);
+    }
+
     setIsLoading(true);
     setToast(null);
-    const items = completedItems.map(({ ex, state }) => ({
-      ejercicio: ex.nombre,
-      peso_kg: state.pesoKg || 0,
-      series_completadas: parseSeries(ex.series) || 1,
-      repeticiones_completadas: state.repeticionesCompletadas || parseSeries(ex.repeticiones) || 10,
-    }));
     const { error } = await insertHistorialRegistros(items);
     setIsLoading(false);
     if (error) {
       setToast("error");
       setToastMessage(error.message);
-      setTimeout(() => { setToast(null); setToastMessage(null); }, 3000);
+      setTimeout(() => {
+        setToast(null);
+        setToastMessage(null);
+      }, 4000);
       return;
     }
     setToast("success");
-    setToastMessage("¡Serie guardada!");
-    setTimeout(() => { setToast(null); setToastMessage(null); }, 3000);
+    setToastMessage("¡Entrenamiento guardado!");
+    setTimeout(() => {
+      setToast(null);
+      setToastMessage(null);
+    }, 3000);
     resetLocalState();
     router.refresh();
   }, [exercises, states, resetLocalState, router]);
@@ -107,7 +116,6 @@ export default function DetalleDiaClient({
         ))}
       </div>
 
-      {/* Toast */}
       {toast && (
         <div
           role="alert"
@@ -117,7 +125,9 @@ export default function DetalleDiaClient({
               : "bg-red-600 text-white"
           }`}
         >
-          {toast === "success" ? toastMessage : (toastMessage ?? "Error al guardar.")}
+          {toast === "success"
+            ? toastMessage
+            : (toastMessage ?? "Error al guardar.")}
         </div>
       )}
 

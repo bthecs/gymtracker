@@ -6,7 +6,7 @@ import {
   LayoutDashboard,
   Dumbbell,
   TrendingUp,
-  Settings,
+  ClipboardList,
 } from "lucide-react";
 import SignOutButton from "@/components/SignOutButton";
 
@@ -14,7 +14,7 @@ const navItems = [
   { href: "/", label: "Inicio", icon: LayoutDashboard },
   { href: "/actividades", label: "Actividades", icon: Dumbbell },
   { href: "/progreso", label: "Progreso", icon: TrendingUp },
-  { href: "/ajustes", label: "Ajustes", icon: Settings },
+  { href: "/ajustes", label: "Rutina", icon: ClipboardList },
 ] as const;
 
 export default function BottomNav() {

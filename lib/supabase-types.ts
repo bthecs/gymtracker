@@ -21,4 +21,5 @@ export interface HistorialRowDb {
   series_completadas: number;
   repeticiones_completadas: number;
   creado_en: string;
+  detalle_series?: { serie: number; peso: number; reps: number }[] | null;
 }

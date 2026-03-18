@@ -36,6 +36,20 @@ create table historial (
   creado_en timestamptz default now()
 );
 
+-- Detalle por serie (carga detallada en el día de entrenamiento)
+-- Ejecuta si la tabla historial ya existe:
+-- alter table historial add column if not exists detalle_series jsonb;
+```
+
+### Columna `detalle_series` (historial)
+
+Guarda un array JSON por fila, p. ej. `[{"serie":1,"peso":20,"reps":10},...]`. En modo general de la app se envía `null`.
+
+```sql
+alter table historial add column if not exists detalle_series jsonb;
+```
+
+```sql
 -- Opcional: RLS (permite anon read/insert si usas anon key)
 alter table rutinas enable row level security;
 alter table historial enable row level security;
@@ -67,7 +81,8 @@ Abre [http://localhost:3000](http://localhost:3000). La raíz redirige a `/activ
 - **/** → redirección a `/actividades`
 - **/actividades** → Resumen semanal (7 tarjetas, una por día)
 - **/actividades/[dia]** → Detalle del día (ej. `/actividades/lunes`): lista de ejercicios, checkboxes y botón "Finalizar Entrenamiento"
-- **/progreso**, **/ajustes** → placeholders
+- **/progreso** → gráficos de evolución
+- **/ajustes** (Rutina) → gestión de rutina y CSV
 
 ## Estructura de carpetas
 
