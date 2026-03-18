@@ -11,7 +11,8 @@ App web en **Next.js (App Router)** + **Tailwind CSS** para gestionar rutinas de
 ## Configuración (Supabase)
 
 1. Copia `.env.local.example` a `.env.local` y rellena tus credenciales de Supabase (Settings → API).
-2. Crea en Supabase las tablas con el SQL del editor SQL:
+2. **Login con Google (OAuth):** en Supabase → Authentication → URL configuration, añade en **Redirect URLs** la URL de callback, por ejemplo `http://localhost:3000/auth/callback` (dev) y `https://tudominio.com/auth/callback` (prod). El flujo usa `signInWithOAuth` y la ruta `app/auth/callback`.
+3. Crea en Supabase las tablas con el SQL del editor SQL:
 
 ```sql
 -- Tabla de rutinas (plan semanal)
