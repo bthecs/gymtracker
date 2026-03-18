@@ -29,9 +29,12 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 function LoginForm() {
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
@@ -42,10 +45,22 @@ function LoginForm() {
     if (err) {
       setError(decodeURIComponent(err));
     }
+
+    const ok = searchParams.get("success");
+    if (ok === "signup") {
+      setIsLogin(true);
+      setSuccess("Registro exitoso. Ahora puedes iniciar sesión.");
+    }
   }, [searchParams]);
+
+  useEffect(() => {
+    setError(null);
+    setSuccess(null);
+  }, [isLogin]);
 
   async function handleGoogleLogin() {
     setError(null);
+    setSuccess(null);
     setGoogleLoading(true);
     try {
       const supabase = createClient();
@@ -68,22 +83,51 @@ function LoginForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
+
+    if (!isLogin && confirmPassword && confirmPassword !== password) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
+
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (signInError) {
-        setError(signInError.message);
+      if (isLogin) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) {
+          setError(signInError.message);
+          setLoading(false);
+          return;
+        }
+        router.push("/actividades");
+        router.refresh();
+      } else {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (signUpError) {
+          setError(signUpError.message);
+          setLoading(false);
+          return;
+        }
+
+        // Sign up OK: volvemos a modo login y mostramos mensaje.
+        setPassword("");
+        setConfirmPassword("");
+        setIsLogin(true);
+        setSuccess("Registro exitoso. Ahora puedes iniciar sesión.");
+        router.replace("/login?success=signup");
+        router.refresh();
         setLoading(false);
         return;
       }
-      router.push("/");
-      router.refresh();
     } catch {
-      setError("Error al iniciar sesión");
+      setError(isLogin ? "Error al iniciar sesión" : "Error al crear la cuenta");
     } finally {
       setLoading(false);
     }
@@ -98,10 +142,12 @@ function LoginForm() {
           </div>
         </div>
         <h1 className="mb-2 text-center text-2xl font-bold text-zinc-100">
-          FitTrack
+          {isLogin ? "Iniciar Sesión" : "Crear Cuenta"}
         </h1>
         <p className="mb-6 text-center text-sm text-zinc-400">
-          Inicia sesión para continuar
+          {isLogin
+            ? "Entra para continuar"
+            : "Crea tu cuenta para empezar"}
         </p>
 
         <button
@@ -164,6 +210,30 @@ function LoginForm() {
               placeholder="••••••••"
             />
           </div>
+          {!isLogin && (
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="mb-1.5 block text-sm font-medium text-zinc-300"
+              >
+                Confirmar contraseña
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                placeholder="••••••••"
+              />
+            </div>
+          )}
+          {success && (
+            <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+              {success}
+            </p>
+          )}
           {error && (
             <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
               {error}
@@ -174,7 +244,37 @@ function LoginForm() {
             disabled={loading || googleLoading}
             className="mt-2 w-full rounded-xl bg-emerald-500 px-4 py-3.5 text-base font-semibold text-zinc-950 transition-colors hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Iniciando sesión…" : "Iniciar sesión"}
+            {loading
+              ? "Cargando…"
+              : isLogin
+                ? "Entrar"
+                : "Registrarse"}
+          </button>
+
+          <button
+            type="button"
+            disabled={loading || googleLoading}
+            onClick={() => {
+              setIsLogin((v) => !v);
+              setConfirmPassword("");
+            }}
+            className="mt-2 text-center text-sm text-zinc-400 transition-colors hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLogin ? (
+              <span>
+                ¿No tienes cuenta?{" "}
+                <span className="font-semibold text-emerald-400">
+                  Regístrate
+                </span>
+              </span>
+            ) : (
+              <span>
+                ¿Ya tienes cuenta?{" "}
+                <span className="font-semibold text-emerald-400">
+                  Inicia sesión
+                </span>
+              </span>
+            )}
           </button>
         </form>
       </div>
